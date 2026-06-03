@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      UserRole @default(STAFF)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sentEmails     Email[]           @relation("SentEmails")
+  receivedEmails EmailRecipient[]
+  templates      Template[]
+  automations    Automation[]
+
+  @@index([email])
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+model Email {
+  id          String      @id @default(uuid())
+  threadId    String?
+  subject     String
+  body        String      @db.Text
+  htmlBody    String      @db.Text
+  status      EmailStatus @default(DRAFT)
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  senderId   String
+  sender     User             @relation("SentEmails", fields: [senderId], references: [id])
+  recipients EmailRecipient[]
+  attachments Attachment[]
+  labels     EmailLabel[]
+
+  @@index([senderId, status])
+  @@index([threadId])
+  @@index([scheduledAt])
+}
+
+enum EmailStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  FAILED
+}
+
+model EmailRecipient {
+  id      String        @id @default(uuid())
+  emailId String
+  userId  String?
+  email   String
+  type    RecipientType
+  read    Boolean       @default(false)
+  readAt  DateTime?
+
+  emailData Email  @relation(fields: [emailId], references: [id], onDelete: Cascade)
+  user      User?  @relation(fields: [userId], references: [id])
+
+  @@index([userId, read])
+  @@index([emailId])
+}
+
+enum RecipientType {
+  TO
+  CC
+  BCC
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  emailId   String
+  filename  String
+  fileUrl   String
+  fileSize  Int
+  mimeType  String
+  createdAt DateTime @default(now())
+
+  email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@index([emailId])
+}
+
+model Template {
+  id        String   @id @default(uuid())
+  name      String
+  subject   String
+  body      String   @db.Text
+  variables Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Automation {
+  id          String      @id @default(uuid())
+  name        String
+  enabled     Boolean     @default(true)
+  triggerType TriggerType
+  triggerData Json?
+  actionType  ActionType
+  actionData  Json?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId, enabled])
+}
+
+enum TriggerType {
+  USER_CREATED
+  EMAIL_RECEIVED
+  SCHEDULED
+  LABEL_ADDED
+}
+
+enum ActionType {
+  SEND_EMAIL
+  ADD_LABEL
+  FORWARD
+  ARCHIVE
+}
+
+model EmailLabel {
+  id      String @id @default(uuid())
+  emailId String
+  label   String
+
+  email Email @relation(fields: [emailId], references: [id], onDelete: Cascade)
+
+  @@index([emailId])
+  @@index([label])
+}
