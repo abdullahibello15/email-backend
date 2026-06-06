@@ -5,6 +5,7 @@ import authRoutes from "./routes/auth.js";
 import emailRoutes from "./routes/emails.js";
 import templateRoutes from "./routes/templates.js";
 import automationRoutes from "./routes/automation.js";
+import domainsRouter from "./routes/domains.js";
 import { aiRouter } from "./services/aiService.js";
 import { initializeQueues } from "./services/queueService.js";
 
@@ -24,6 +25,7 @@ app.use("/api/emails", emailRoutes);
 app.use("/api/templates", templateRoutes);
 app.use("/api/automation", automationRoutes);
 app.use("/api/ai", aiRouter);
+app.use("/api/domains", domainsRouter);
 
 // Health check
 app.get("/health", (req, res) => {
