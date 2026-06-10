@@ -64,6 +64,17 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
+    const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0] || req.socket.remoteAddress || undefined;
+    const userAgent = req.headers["user-agent"];
+
+    await prisma.loginDetail.create({
+      data: {
+        userId: user.id,
+        ipAddress,
+        userAgent,
+      },
+    });
+
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET!,

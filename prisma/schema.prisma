@@ -22,8 +22,22 @@ model User {
   automations    Automation[]
   createdDomains Domain[] @relation("CreatedDomains")
   createdStaffAccounts StaffAccount[] @relation("CreatedStaffAccounts")
+  loginDetails   LoginDetail[]
 
   @@index([email])
+}
+
+model LoginDetail {
+  id        String   @id @default(uuid())
+  ipAddress String?
+  userAgent String?
+  loginAt   DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([loginAt])
 }
 
 model Domain {
