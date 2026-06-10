@@ -21,6 +21,7 @@ model User {
   templates      Template[]
   automations    Automation[]
   createdDomains Domain[] @relation("CreatedDomains")
+  createdStaffAccounts StaffAccount[] @relation("CreatedStaffAccounts")
 
   @@index([email])
 }
@@ -33,6 +34,7 @@ model Domain {
 
   createdById String
   createdBy   User   @relation("CreatedDomains", fields: [createdById], references: [id])
+  staffAccounts StaffAccount[]
 
   @@index([name])
 }
@@ -165,4 +167,31 @@ model EmailLabel {
 
   @@index([emailId])
   @@index([label])
+}
+
+
+model StaffAccount {
+  id                String             @id @default(uuid())
+  fullName          String
+  email             String             @unique
+  department        String
+  temporaryPassword String
+  status            StaffAccountStatus @default(INVITED)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  domainId    String
+  domain      Domain @relation(fields: [domainId], references: [id])
+
+  createdById String
+  createdBy   User   @relation("CreatedStaffAccounts", fields: [createdById], references: [id])
+
+  @@index([email])
+  @@index([domainId])
+}
+
+enum StaffAccountStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
 }
