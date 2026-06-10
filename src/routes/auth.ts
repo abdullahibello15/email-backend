@@ -96,6 +96,57 @@ router.post("/login", async (req, res) => {
   }
 });
 
+// Admin login
+router.post("/admin/login", async (req, res) => {
+  try {
+    const { email, password } = loginSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    if (user.role !== "ADMIN") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0] || req.socket.remoteAddress || undefined;
+    const userAgent = req.headers["user-agent"];
+
+    await prisma.loginDetail.create({
+      data: {
+        userId: user.id,
+        ipAddress,
+        userAgent,
+      },
+    });
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: user.role },
+      process.env.JWT_SECRET!,
+      { expiresIn: (process.env.JWT_EXPIRES_IN || "7d") as any },
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Admin login error:", error);
+    res.status(401).json({ error: "Login failed" });
+  }
+});
+
 // Get current user
 router.get("/me", authenticateToken, async (req: AuthRequest, res) => {
   try {
